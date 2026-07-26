@@ -1000,7 +1000,6 @@ function renderResults() {
     const p = data.picks[i];
     const emoji = p === 'make' ? '🟢' : p === 'bail' ? '🔴' : '⬜';
     const status = p === 'make' ? 'Make' : p === 'bail' ? 'Bail' : 'Not logged';
-    const clip = data.videos[i];
     return `
       <div class="result-row">
         <div class="result-emoji">${emoji}</div>
@@ -1008,7 +1007,6 @@ function renderResults() {
           <div class="result-name">${escHtml(trick.name)}</div>
           <div class="result-status">${status}</div>
         </div>
-        ${clip ? `<a class="result-clip" href="${escHtml(clip)}" target="_blank" rel="noopener">watch clip →</a>` : ''}
       </div>`;
   }).join('');
 }
