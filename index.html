@@ -890,7 +890,7 @@ function renderRound() {
         <div class="trick-num ${numClass}">${i + 1}</div>
         <div class="trick-info">
           <div class="trick-name">${escHtml(trick.name)}</div>
-          ${trick.url ? `<a class="tutorial-link" href="${escHtml(trick.url)}" target="_blank" rel="noopener">Watch tutorial</a>` : ''}
+          ${trick.url ? `<button class="tutorial-link" onclick="openTutorial(${i})">Watch tutorial</button>` : ''}
         </div>
         <div class="trick-controls">
           <button class="btn-circle btn-make ${pick === 'make' ? 'active' : ''}" onclick="setPick(${i},'make')" title="Make"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="4,12 9,18 20,6"/></svg></button>
