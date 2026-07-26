@@ -1027,7 +1027,7 @@ function copyScore() {
     return `${i + 1}. ${emoji} ${trick.name}${clip}`;
   }).join('\n');
 
-  const text = `SKATE IQ Weekly — ${dots} ${makes}/5\n${lines}`;
+  const text = `Score — ${dots} ${makes}/5`;
 
   navigator.clipboard.writeText(text).then(() => {
     showToast('Copied to clipboard!');
