@@ -368,11 +368,13 @@
       flex-shrink: 0;
     }
 
-    .btn-play {
-      border-color: var(--accent);
-      color: var(--accent);
+    .tutorial-link {
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: underline;
+      text-underline-offset: 3px;
     }
-    .btn-play:hover { background: var(--accent); color: #0d0e0d; }
+    .tutorial-link:hover { color: var(--text); }
 
     .btn-make {
       border-color: var(--make);
@@ -888,15 +890,12 @@ function renderRound() {
         <div class="trick-num ${numClass}">${i + 1}</div>
         <div class="trick-info">
           <div class="trick-name">${escHtml(trick.name)}</div>
+          ${trick.url ? `<a class="tutorial-link" href="${escHtml(trick.url)}" target="_blank" rel="noopener">Watch tutorial</a>` : ''}
         </div>
         <div class="trick-controls">
-          ${trick.url ? `<button class="btn-circle btn-play" onclick="openTutorial(${i})" title="Watch tutorial">▶</button>` : ''}
           <button class="btn-circle btn-make ${pick === 'make' ? 'active' : ''}" onclick="setPick(${i},'make')" title="Make"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="4,12 9,18 20,6"/></svg></button>
           <button class="btn-circle btn-bail ${pick === 'bail' ? 'active' : ''}" onclick="setPick(${i},'bail')" title="Bail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" width="16" height="16"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>
         </div>
-      </div>
-      <div class="trick-video" id="trick-video-${i}">
-        ${renderVideoSection(i, videoUrl)}
       </div>`;
 
     list.appendChild(row);
