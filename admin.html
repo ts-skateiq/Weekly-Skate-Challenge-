@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SKATE IQ — Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0e0d;
+      --surface: #161816;
+      --border: #2a2c2a;
+      --text: #f0f0ee;
+      --muted: #6b6e6b;
+      --accent: #8db87a;
+      --accent-dim: rgba(141,184,122,0.12);
+      --danger: #e05c4b;
+      --radius: 10px;
+      --font: 'Inter', system-ui, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Login ── */
+    #login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 36px 32px;
+    }
+
+    .login-card .wordmark {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .login-card h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 28px;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    input[type="email"],
+    input[type="password"],
+    input[type="text"],
+    input[type="url"] {
+      width: 100%;
+      background: #1e201e;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-family: var(--font);
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="email"]::placeholder,
+    input[type="password"]::placeholder,
+    input[type="text"]::placeholder,
+    input[type="url"]::placeholder { color: var(--muted); }
+
+    input[type="email"]:focus,
+    input[type="password"]:focus,
+    input[type="text"]:focus,
+    input[type="url"]:focus { border-color: var(--accent); }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--accent);
+      color: #0d0e0d;
+      border: none;
+      border-radius: 8px;
+      padding: 13px;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.15s;
+    }
+
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .login-error {
+      font-size: 13px;
+      color: var(--danger);
+      margin-top: 12px;
+      min-height: 18px;
+      text-align: center;
+    }
+
+    /* ── Admin ── */
+    #admin-screen {
+      display: none;
+      padding: 40px 20px 80px;
+    }
+
+    header {
+      max-width: 740px;
+      margin: 0 auto 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .wordmark {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .btn-logout {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 7px 14px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+
+    .container { max-width: 740px; margin: 0 auto; }
+
+    .week-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .week-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .week-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-dim);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .week-date {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .trick-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .trick-row:last-child { margin-bottom: 0; }
+
+    .trick-num {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      grid-column: 1 / -1;
+      margin-top: 10px;
+      margin-bottom: 6px;
+    }
+
+    .url-wrap { position: relative; }
+
+    .url-wrap input { padding-left: 36px; }
+
+    .url-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      pointer-events: none;
+      opacity: 0.4;
+    }
+
+    .actions {
+      max-width: 740px;
+      margin: 28px auto 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-save {
+      background: var(--accent);
+      color: #0d0e0d;
+      border: none;
+      border-radius: 8px;
+      padding: 13px 28px;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: opacity 0.15s;
+    }
+
+    .btn-save:hover { opacity: 0.88; }
+    .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .status {
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .status.show { opacity: 1; }
+    .status.ok { color: var(--accent); }
+    .status.err { color: var(--danger); }
+
+    @media (max-width: 540px) {
+      .trick-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-card">
+    <span class="wordmark">Skate IQ</span>
+    <h1>Admin Login</h1>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="you@skateiq.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="login-btn" onclick="login()">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- Admin -->
+<div id="admin-screen">
+  <header>
+    <span class="wordmark">SKATE IQ</span>
+    <h1>Schedule Admin</h1>
+    <button class="btn-logout" onclick="logout()">Log out</button>
+  </header>
+
+  <div class="container" id="schedule-form"></div>
+
+  <div class="actions">
+    <button class="btn-save" id="save-btn" onclick="save()">Save Schedule</button>
+    <span class="status" id="status"></span>
+  </div>
+</div>
+
+<script>
+let schedule = [];
+let token = localStorage.getItem('admin_token');
+
+function fmtDate(str) {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+  });
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function render() {
+  const el = document.getElementById('schedule-form');
+  el.innerHTML = schedule.map((week, wi) => `
+    <div class="week-card">
+      <div class="week-header">
+        <span class="week-label">Week ${wi + 1}</span>
+        <span class="week-date">${fmtDate(week.start)}</span>
+      </div>
+      ${week.tricks.map((trick, ti) => `
+        <div class="trick-num">Trick ${ti + 1}</div>
+        <div class="trick-row">
+          <input type="text"
+            placeholder="Trick name"
+            value="${escHtml(trick.name)}"
+            oninput="schedule[${wi}].tricks[${ti}].name = this.value"
+          >
+          <div class="url-wrap">
+            <span class="url-icon">▶</span>
+            <input type="url"
+              placeholder="YouTube URL (optional)"
+              value="${escHtml(trick.url)}"
+              oninput="schedule[${wi}].tricks[${ti}].url = this.value"
+            >
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+async function login() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
+
+  btn.disabled = true;
+  err.textContent = '';
+
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+    token = data.token;
+    localStorage.setItem('admin_token', token);
+    showAdmin();
+  } catch (e) {
+    err.textContent = e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function logout() {
+  await fetch('/api/logout', {
+    method: 'POST',
+    headers: { 'x-admin-token': token || '' }
+  });
+  token = null;
+  localStorage.removeItem('admin_token');
+  document.getElementById('admin-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-password').value = '';
+}
+
+async function showAdmin() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-screen').style.display = 'block';
+  await load();
+}
+
+async function save() {
+  const btn = document.getElementById('save-btn');
+  const status = document.getElementById('status');
+  btn.disabled = true;
+  status.className = 'status';
+
+  try {
+    const res = await fetch('/api/schedule', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-token': token || ''
+      },
+      body: JSON.stringify(schedule)
+    });
+    if (res.status === 401) { logout(); return; }
+    if (!res.ok) throw new Error();
+    status.textContent = '✓ Saved';
+    status.className = 'status show ok';
+  } catch {
+    status.textContent = 'Save failed — is the server running?';
+    status.className = 'status show err';
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => status.className = 'status', 3000);
+  }
+}
+
+async function load() {
+  try {
+    const res = await fetch('/api/schedule');
+    schedule = await res.json();
+    render();
+  } catch {
+    document.getElementById('schedule-form').innerHTML =
+      '<p style="color:#e05c4b;padding:20px">Could not load schedule — is the server running?</p>';
+  }
+}
+
+// Enter password with Enter key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') {
+    login();
+  }
+});
+
+// Check for existing session on load
+if (token) {
+  showAdmin();
+} else {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('admin-screen').style.display = 'none';
+}
+</script>
+</body>
+</html>
