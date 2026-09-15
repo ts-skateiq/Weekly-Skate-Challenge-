@@ -447,20 +447,29 @@ function render() {
           <input type="text"
             placeholder="Trick name"
             value="${escHtml(trick.name)}"
-            oninput="schedule[${gi}].tricks[${ti}].name = this.value"
+            oninput="schedule[${gi}].tricks[${ti}].name = this.value; scheduleSave()"
           >
           <div class="url-wrap">
             <span class="url-icon">▶</span>
             <input type="url"
               placeholder="YouTube URL (optional)"
               value="${escHtml(trick.url)}"
-              oninput="schedule[${gi}].tricks[${ti}].url = this.value"
+              oninput="schedule[${gi}].tricks[${ti}].url = this.value; scheduleSave()"
             >
           </div>
         </div>
       `).join('')}
     </div>
   `}).join('');
+}
+
+let _saveTimer = null;
+function scheduleSave() {
+  clearTimeout(_saveTimer);
+  const status = document.getElementById('status');
+  status.textContent = 'Unsaved…';
+  status.className = 'status show';
+  _saveTimer = setTimeout(save, 1200);
 }
 
 async function login() {
