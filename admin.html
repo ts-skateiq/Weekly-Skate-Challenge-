@@ -241,6 +241,44 @@
       opacity: 0.4;
     }
 
+    /* ── Month nav ── */
+    .month-nav {
+      max-width: 740px;
+      margin: 0 auto 28px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .month-nav button {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 18px;
+      font-weight: 500;
+      padding: 12px 20px;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+
+    .month-nav button:hover { color: var(--text); background: var(--accent-dim); }
+
+    .month-nav .month-label {
+      flex: 1;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
     .actions {
       max-width: 740px;
       margin: 28px auto 0;
@@ -314,6 +352,12 @@
     </div>
   </header>
 
+  <div class="month-nav">
+    <button onclick="prevMonth()">‹</button>
+    <span class="month-label" id="month-label"></span>
+    <button onclick="nextMonth()">›</button>
+  </div>
+
   <div class="container" id="schedule-form"></div>
 
   <div class="actions">
@@ -325,6 +369,10 @@
 <script>
 let schedule = [];
 let token = localStorage.getItem('admin_token');
+
+const _now = new Date();
+let currentYear  = _now.getFullYear();
+let currentMonth = _now.getMonth(); // 0-indexed
 
 function fmtDate(str) {
   const [y, m, d] = str.split('-').map(Number);
@@ -341,12 +389,56 @@ function escHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+function getFridaysInMonth(year, month) {
+  const fridays = [];
+  const d = new Date(year, month, 1);
+  while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
+  while (d.getMonth() === month) {
+    fridays.push(d.toISOString().split('T')[0]);
+    d.setDate(d.getDate() + 7);
+  }
+  return fridays;
+}
+
+function ensureMonthWeeks() {
+  const fridays = getFridaysInMonth(currentYear, currentMonth);
+  fridays.forEach(start => {
+    if (!schedule.find(w => w.start === start)) {
+      schedule.push({ start, tricks: Array.from({ length: 5 }, () => ({ name: '', url: '' })) });
+    }
+  });
+  schedule.sort((a, b) => a.start.localeCompare(b.start));
+}
+
+function prevMonth() {
+  currentMonth--;
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  render();
+}
+
+function nextMonth() {
+  currentMonth++;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  render();
+}
+
 function render() {
+  ensureMonthWeeks();
+
+  const label = new Date(currentYear, currentMonth, 1)
+    .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  document.getElementById('month-label').textContent = label;
+
+  const monthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+  const monthWeeks = schedule.filter(w => w.start.startsWith(monthStr));
+
   const el = document.getElementById('schedule-form');
-  el.innerHTML = schedule.map((week, wi) => `
+  el.innerHTML = monthWeeks.map((week) => {
+    const gi = schedule.indexOf(week);
+    return `
     <div class="week-card">
       <div class="week-header">
-        <span class="week-label">Week ${wi + 1}</span>
+        <span class="week-label">Week of</span>
         <span class="week-date">${fmtDate(week.start)}</span>
       </div>
       ${week.tricks.map((trick, ti) => `
@@ -355,20 +447,20 @@ function render() {
           <input type="text"
             placeholder="Trick name"
             value="${escHtml(trick.name)}"
-            oninput="schedule[${wi}].tricks[${ti}].name = this.value"
+            oninput="schedule[${gi}].tricks[${ti}].name = this.value"
           >
           <div class="url-wrap">
             <span class="url-icon">▶</span>
             <input type="url"
               placeholder="YouTube URL (optional)"
               value="${escHtml(trick.url)}"
-              oninput="schedule[${wi}].tricks[${ti}].url = this.value"
+              oninput="schedule[${gi}].tricks[${ti}].url = this.value"
             >
           </div>
         </div>
       `).join('')}
     </div>
-  `).join('');
+  `}).join('');
 }
 
 async function login() {
