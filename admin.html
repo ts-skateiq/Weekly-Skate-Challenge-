@@ -4,21 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SKATE IQ — Admin</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap">
+  <script>
+    // Inside the accountability app: hide links back to the standalone game; the app menu handles navigation.
+    try { if (window.self !== window.top) document.documentElement.classList.add('embedded') } catch (e) { document.documentElement.classList.add('embedded') }
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0d0e0d;
-      --surface: #161816;
+      --bg: #111111;
+      --surface: #1a1b1a;
       --border: #2a2c2a;
-      --text: #f0f0ee;
-      --muted: #6b6e6b;
-      --accent: #8db87a;
-      --accent-dim: rgba(141,184,122,0.12);
-      --danger: #e05c4b;
+      --text: #f4f5f3;
+      --muted: #8b908a;
+      --accent: #71a88a;
+      --accent-dim: rgba(113,168,138,0.15);
+      --danger: #e0705c;
       --radius: 10px;
-      --font: 'Inter', system-ui, sans-serif;
+      --font: "General Sans", "Helvetica Neue", Arial, sans-serif;
     }
 
     body {
@@ -82,7 +86,7 @@
     input[type="text"],
     input[type="url"] {
       width: 100%;
-      background: #1e201e;
+      background: #222422;
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 11px 14px;
@@ -106,7 +110,7 @@
     .btn-primary {
       width: 100%;
       background: var(--accent);
-      color: #0d0e0d;
+      color: #ffffff;
       border: none;
       border-radius: 8px;
       padding: 13px;
@@ -289,7 +293,7 @@
 
     .btn-save {
       background: var(--accent);
-      color: #0d0e0d;
+      color: #ffffff;
       border: none;
       border-radius: 8px;
       padding: 13px 28px;
@@ -302,6 +306,12 @@
     }
 
     .btn-save:hover { opacity: 0.88; }
+
+    .view-member-link {
+      display: block; width: fit-content; margin: 16px 0 -6px auto;
+      font-size: 12px; font-weight: 500; color: var(--muted); text-decoration: underline; text-underline-offset: 3px;
+    }
+    .view-member-link:hover { color: var(--accent); }
     .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .status {
@@ -318,6 +328,7 @@
     @media (max-width: 540px) {
       .trick-row { grid-template-columns: 1fr; }
     }
+  .embedded .back-to-app, .embedded .wordmark { display: none !important; }
   </style>
 </head>
 <body>
@@ -337,7 +348,7 @@
     </div>
     <button class="btn-primary" id="login-btn" onclick="login()">Sign In</button>
     <div class="login-error" id="login-error"></div>
-    <a href="/" style="display:block;text-align:center;margin-top:20px;font-size:13px;color:var(--muted);text-decoration:none;">← Back to app</a>
+    <a href="/" class="back-to-app" style="display:block;text-align:center;margin-top:20px;font-size:13px;color:var(--muted);text-decoration:none;">← Back to app</a>
   </div>
 </div>
 
@@ -345,9 +356,9 @@
 <div id="admin-screen">
   <header>
     <span class="wordmark">SKATE IQ</span>
-    <h1>Schedule Admin</h1>
+    <h1>Game of Skate</h1>
     <div style="display:flex;gap:10px;align-items:center">
-      <a href="/" class="btn-logout" style="text-decoration:none">← App</a>
+      <a href="/" class="btn-logout back-to-app" style="text-decoration:none">← App</a>
       <button class="btn-logout" onclick="logout()">Log out</button>
     </div>
   </header>
@@ -459,6 +470,7 @@ function render() {
           </div>
         </div>
       `).join('')}
+      <a class="view-member-link" href="/?view=member&week=${week.start}" onclick="stashPreview()">View as member</a>
     </div>
   `}).join('');
 }
@@ -517,6 +529,11 @@ async function showAdmin() {
   await load();
 }
 
+// "View as member" previews the schedule as it is in this page, saved or not, without changing the live game.
+function stashPreview() {
+  try { sessionStorage.setItem('skateiq_preview_schedule', JSON.stringify(schedule)); } catch {}
+}
+
 async function save() {
   const btn = document.getElementById('save-btn');
   const status = document.getElementById('status');
@@ -552,7 +569,7 @@ async function load() {
     render();
   } catch {
     document.getElementById('schedule-form').innerHTML =
-      '<p style="color:#e05c4b;padding:20px">Could not load schedule — is the server running?</p>';
+      '<p style="color:var(--danger);padding:20px">Could not load schedule — is the server running?</p>';
   }
 }
 
