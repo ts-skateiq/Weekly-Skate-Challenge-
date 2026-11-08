@@ -12,10 +12,24 @@ const DATA_FILE = path.join(__dirname, 'schedule.json');
 const WEEKS = 8;
 const TRICKS_PER_WEEK = 5;
 
-const USERS = {
-  'mitchie@skateiq.com': process.env.ADMIN_PASSWORD || 'Janwun69',
-  'tyler@skateiq.com':   process.env.ADMIN_PASSWORD || 'Janwun69',
-};
+// Admin access comes from the Skate IQ Accountability app: when a coach opens S.K.A.T.E. there,
+// the app hands over a short-lived pass signed with SKATE_ADMIN_SECRET (the same value is set in both apps).
+// There is no separate admin password.
+const ADMIN_SECRET = process.env.SKATE_ADMIN_SECRET || '';
+
+function verifyAppPass(pass) {
+  if (!ADMIN_SECRET || typeof pass !== 'string') return null;
+  const [body, sig] = pass.split('.');
+  if (!body || !sig) return null;
+  const expected = crypto.createHmac('sha256', ADMIN_SECRET).update(body).digest('base64url');
+  const a = Buffer.from(sig), b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  try {
+    const claims = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (claims.role !== 'coach' || typeof claims.exp !== 'number' || claims.exp < Date.now()) return null;
+    return claims;
+  } catch { return null; }
+}
 
 const sessions = new Map();
 
@@ -65,16 +79,17 @@ function requireAuth(req, res, next) {
 
 // ── Admin routes ──────────────────────────────────────────────────────────────
 
-app.post('/api/login', (req, res) => {
-  const { email, password } = req.body || {};
-  const key = (email || '').toLowerCase();
-  if (!USERS[key] || USERS[key] !== password) {
-    return res.status(401).json({ error: 'Invalid email or password' });
-  }
+app.post('/api/app-login', (req, res) => {
+  if (!ADMIN_SECRET) return res.status(503).json({ error: 'Admin is not set up (SKATE_ADMIN_SECRET missing)' });
+  const claims = verifyAppPass((req.body || {}).pass);
+  if (!claims) return res.status(401).json({ error: 'Open the admin from the Skate IQ Accountability app' });
   const token = crypto.randomBytes(32).toString('hex');
-  sessions.set(token, key);
+  sessions.set(token, claims.email || 'coach');
   res.json({ token });
 });
+
+// Lets the admin page check a saved session is still valid (sessions reset when the server restarts).
+app.get('/api/session', requireAuth, (req, res) => res.json({ ok: true }));
 
 app.post('/api/logout', (req, res) => {
   const token = req.headers['x-admin-token'];
@@ -173,5 +188,6 @@ app.post('/api/weekly-score', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`SKATE IQ → http://localhost:${PORT}`);
-  console.log(`Admin    → http://localhost:${PORT}/admin.html`);
+  console.log(`Admin    → open S.K.A.T.E. in the Skate IQ Accountability app as a coach`);
+  if (!ADMIN_SECRET) console.log('Warning: SKATE_ADMIN_SECRET is not set, so the admin is locked.');
 });

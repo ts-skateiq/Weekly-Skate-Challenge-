@@ -329,26 +329,17 @@
       .trick-row { grid-template-columns: 1fr; }
     }
   .embedded .back-to-app, .embedded .wordmark { display: none !important; }
+  .login-note { font-size: 14px; line-height: 1.5; color: var(--muted); margin-top: 12px; }
   </style>
 </head>
 <body>
 
-<!-- Login -->
+<!-- Shown when the admin is opened outside the accountability app, or the pass is rejected -->
 <div id="login-screen">
   <div class="login-card">
     <span class="wordmark">Skate IQ</span>
-    <h1>Admin Login</h1>
-    <div class="field">
-      <label>Email</label>
-      <input type="email" id="login-email" placeholder="you@skateiq.com" autocomplete="email">
-    </div>
-    <div class="field">
-      <label>Password</label>
-      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
-    </div>
-    <button class="btn-primary" id="login-btn" onclick="login()">Sign In</button>
-    <div class="login-error" id="login-error"></div>
-    <a href="/" class="back-to-app" style="display:block;text-align:center;margin-top:20px;font-size:13px;color:var(--muted);text-decoration:none;">← Back to app</a>
+    <h1>Game of Skate admin</h1>
+    <p class="login-note" id="login-error">Sign in to the Skate IQ Accountability app as a coach, then open S.K.A.T.E. from the menu.</p>
   </div>
 </div>
 
@@ -359,7 +350,7 @@
     <h1>Game of Skate</h1>
     <div style="display:flex;gap:10px;align-items:center">
       <a href="/" class="btn-logout back-to-app" style="text-decoration:none">← App</a>
-      <button class="btn-logout" onclick="logout()">Log out</button>
+      <button class="btn-logout back-to-app" onclick="logout()">Log out</button>
     </div>
   </header>
 
@@ -484,44 +475,33 @@ function scheduleSave() {
   _saveTimer = setTimeout(save, 1200);
 }
 
-async function login() {
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  const btn = document.getElementById('login-btn');
-  const err = document.getElementById('login-error');
-
-  btn.disabled = true;
-  err.textContent = '';
-
+// The accountability app passes a short-lived signed pass in the URL hash (#pass=...). Trade it for a session.
+async function appLogin(pass) {
   try {
-    const res = await fetch('/api/login', {
+    const res = await fetch('/api/app-login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ pass })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Login failed');
+    if (!res.ok) throw new Error(data.error || 'Not allowed');
     token = data.token;
     localStorage.setItem('admin_token', token);
     showAdmin();
   } catch (e) {
-    err.textContent = e.message;
-  } finally {
-    btn.disabled = false;
+    showLocked(e.message);
   }
 }
 
-async function logout() {
-  await fetch('/api/logout', {
-    method: 'POST',
-    headers: { 'x-admin-token': token || '' }
-  });
+function showLocked(message) {
   token = null;
   localStorage.removeItem('admin_token');
+  if (message) document.getElementById('login-error').textContent = message;
   document.getElementById('admin-screen').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('login-password').value = '';
 }
+
+function logout() { showLocked(); }
 
 async function showAdmin() {
   document.getElementById('login-screen').style.display = 'none';
@@ -573,19 +553,17 @@ async function load() {
   }
 }
 
-// Enter password with Enter key
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') {
-    login();
-  }
-});
-
-// Check for existing session on load
-if (token) {
-  showAdmin();
+// Startup: a pass from the app wins; otherwise reuse a session from earlier.
+const _pass = new URLSearchParams(location.hash.slice(1)).get('pass');
+if (_pass) {
+  history.replaceState(null, '', location.pathname + location.search);
+  appLogin(_pass);
+} else if (token) {
+  fetch('/api/session', { headers: { 'x-admin-token': token } })
+    .then(r => (r.ok ? showAdmin() : showLocked()))
+    .catch(() => showLocked());
 } else {
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('admin-screen').style.display = 'none';
+  showLocked();
 }
 </script>
 </body>
