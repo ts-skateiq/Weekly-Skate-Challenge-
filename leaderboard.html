@@ -91,6 +91,12 @@
     flex-shrink: 0;
   }
   .rank.top { color: var(--text); }
+  .medal-emoji {
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+  }
   .user-info { flex: 1; min-width: 0; }
   .username {
     font-size: 15px;
@@ -99,6 +105,20 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .dots-row {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: transparent;
+  }
+  .dot.make { background: var(--make); border-color: var(--make); }
+  .dot.bail { background: var(--bail); border-color: var(--bail); }
   .score-text {
     font-size: 15px;
     font-weight: 700;
@@ -126,15 +146,6 @@
   .header { background: #111; color: #fff; border-bottom: 0; height: 64px; }
   button { font-family: inherit; }
   .embedded .header { background: #fff; color: var(--text); border-bottom: 1px solid var(--border); }
-  /* Title centered, Back on the left */
-  .header { display: grid; grid-template-columns: 1fr auto 1fr; }
-  .header .back-btn { justify-self: start; }
-  .header-title { text-align: center; }
-  /* Rank and name on the left, score in the middle, emojis on the right. */
-  .entry { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto minmax(0, 1fr); column-gap: 12px; }
-  .emoji-score { font-size: 18px; letter-spacing: 2px; line-height: 1.2; white-space: nowrap; justify-self: end; }
-  .entry .score-text { text-align: center; }
-  .entry .rank, .entry .rank.top { color: var(--text); opacity: 0.35; }
 </style>
 </head>
 <body>
@@ -150,6 +161,27 @@
 </div>
 
 <script>
+const MEDAL_EMOJI = { gold: '🥇', silver: '🥈', bronze: '🥉' };
+
+function getMedal(makes, total) {
+  if (makes === total) return 'gold';
+  if (makes === 0) return null;
+  if (total === 2) return 'silver';
+  if (total === 3) return makes >= 2 ? 'silver' : 'bronze';
+  if (total === 4) return makes >= 3 ? 'silver' : 'bronze';
+  if (total === 5) return makes >= 3 ? 'silver' : 'bronze';
+  return makes / total >= 0.6 ? 'silver' : 'bronze';
+}
+
+function renderDots(dots, total) {
+  const chars = dots ? [...dots] : [];
+  return Array.from({ length: total }, (_, i) => {
+    const c = chars[i];
+    const cls = c === '🟢' ? 'make' : c === '🔴' ? 'bail' : '';
+    return `<div class="dot ${cls}"></div>`;
+  }).join('');
+}
+
 function fmtDate(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -169,19 +201,20 @@ async function load() {
     return;
   }
 
-  board.innerHTML = entries.map((e, i) => `
+  board.innerHTML = entries.map((e, i) => {
+    const medal = getMedal(e.makes, e.total);
+    const medalHtml = medal ? `<div class="medal-emoji">${MEDAL_EMOJI[medal]}</div>` : `<div class="medal-emoji"></div>`;
+    return `
       <div class="entry">
         <div class="rank ${i < 3 ? 'top' : ''}">${i + 1}</div>
-        <div class="username">${escHtml(e.name)}</div>
+        ${medalHtml}
+        <div class="user-info">
+          <div class="username">${escHtml(e.name)}</div>
+          <div class="dots-row">${renderDots(e.dots, e.total)}</div>
+        </div>
         <div class="score-text">${e.makes}/${e.total}</div>
-        <div class="emoji-score" aria-label="${e.makes} of ${e.total} made">${emojiScore(e.dots, e.total)}</div>
-      </div>`).join('');
-}
-
-// One emoji per trick, pass or fail: 🟢 made, 🔴 anything else.
-function emojiScore(dots, total) {
-  const chars = dots ? [...dots] : [];
-  return Array.from({ length: total }, (_, i) => chars[i] === '🟢' ? '🟢' : '🔴').join('');
+      </div>`;
+  }).join('');
 }
 
 function escHtml(s) {

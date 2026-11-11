@@ -479,6 +479,13 @@
       line-height: 1;
       color: var(--text);
     }
+    .score-label {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
     .score-dots {
       display: flex;
       justify-content: center;
@@ -722,7 +729,6 @@
   .results-title { font-size: 22px; }
   .trick-num { font-size: 34px; }
   .score-big { font-size: 72px; }
-  .score-dots { margin-top: 24px; }
   .countdown-value { font-size: 30px; }
 
   /* Black top bar and menu, like the app */
@@ -743,16 +749,13 @@
   .btn-pill:hover, .btn-submit-score:hover { opacity: 1; background: var(--accent-dark); }
   .btn-pill.outline { background: transparent; border: 1px solid #cfd3d0; color: var(--text); }
   .btn-pill.outline:hover { background: var(--surface); }
-  .btn-pill.btn-black { background: #111; color: #fff; }
-  .btn-pill.btn-black:hover { background: #333; }
   .btn-leaderboard { border-radius: 8px; border-color: #cfd3d0; color: var(--text); font-weight: 500; }
   .btn-make.active, .btn-bail.active { color: #fff; }
   .tutorial-link:hover, .add-video-btn:hover { color: var(--accent-dark); }
   .modal-backdrop, .auth-modal-overlay { background: rgba(17,17,17,.45); }
   .toast { background: #111; color: #fff; border-radius: 8px; font-weight: 500; }
   .admin-link:hover { color: var(--text); }
-  /* The game lives inside the accountability app, whose menu is the only menu. */
-  .header, .menu-overlay, .admin-link { display: none !important; }
+  .embedded .header, .embedded .menu-overlay, .embedded .admin-link { display: none !important; }
   .embedded #app { min-height: 100vh; }
   .admin-preview-bar { display: none; }
   .admin-preview .admin-preview-bar {
@@ -862,13 +865,13 @@
     </div>
     <div class="score-hero">
       <div class="score-big" id="score-big">0/5</div>
+      <div class="score-label">This Week's Score</div>
       <div class="score-dots" id="score-dots"></div>
     </div>
     <div class="results-list" id="results-list"></div>
     <div class="results-footer">
-      <button class="btn-pill" onclick="copyScore()">Copy score</button>
+      <button class="btn-pill" onclick="copyScore()">Copy score for comment</button>
       <button class="btn-pill outline" onclick="showView('round')">← Back to tricks</button>
-      <a class="btn-pill btn-black" href="/leaderboard.html" onclick="openLeaderboard(event)">View leaderboard</a>
     </div>
   </div>
 
@@ -1306,8 +1309,8 @@ async function init() {
     return;
   }
   renderHome();
-  // Open straight on this week's tricks. The home screen only shows before the first round starts.
-  if (getState().type !== 'pregame') showView('round');
+  // Admin "View as member" opens straight on that week's tricks.
+  if (PREVIEW_WEEK) showView('round');
 }
 init();
 </script>
@@ -1322,51 +1325,6 @@ function getClientId() {
 }
 function getDisplayName() { return localStorage.getItem('skateiq_display_name') || ''; }
 function setDisplayName(n) { localStorage.setItem('skateiq_display_name', n); }
-
-// Inside the accountability app the member's name and id come in the URL, so nobody types a name.
-(() => {
-  const q = new URLSearchParams(location.search);
-  const member = q.get('member'), name = q.get('name');
-  if (member && name) {
-    localStorage.setItem('skateiq_client_id', 'member:' + member);
-    setDisplayName(name);
-  }
-})();
-
-// Keep this week's leaderboard row up to date as tricks are logged. Skipped in the admin's preview.
-let _syncTimer = null;
-function syncScore() {
-  clearTimeout(_syncTimer);
-  return new Promise(resolve => { _syncTimer = setTimeout(() => sendScore().finally(resolve), 600); });
-}
-async function sendScore() {
-  if (PREVIEW_WEEK || !getDisplayName()) return;
-  const state = getState();
-  if (!state.round) return;
-  const round = state.round;
-  const data = loadRoundData(round);
-  if (!Object.keys(data.picks).length) return;
-  const total = round.tricks.length;
-  const makes = round.tricks.filter((_, i) => data.picks[i] === 'make').length;
-  const dots = round.tricks.map((_, i) => data.picks[i] === 'make' ? '🟢' : '🔴').join('');
-  try {
-    await fetch('/api/weekly-score', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: getClientId(), name: getDisplayName(), makes, total, dots, week_start: round.start }),
-    });
-  } catch {}
-}
-const _origSetPick = setPick;
-setPick = function (i, pick) { _origSetPick(i, pick); syncScore(); };
-
-// Opening the leaderboard sends the latest score first, so you see yourself on it.
-async function openLeaderboard(e) {
-  e.preventDefault();
-  clearTimeout(_syncTimer);
-  await sendScore();
-  location.href = '/leaderboard.html';
-}
 
 let scoreSubmitted = false;
 

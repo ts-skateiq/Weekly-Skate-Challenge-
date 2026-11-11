@@ -9,11 +9,6 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 const DATA_FILE = path.join(__dirname, 'schedule.json');
-// Scores go to Supabase when it's configured; otherwise to this local file.
-const SCORES_FILE = path.join(__dirname, 'scores.json');
-function loadLocalScores() {
-  try { return JSON.parse(fs.readFileSync(SCORES_FILE, 'utf8')); } catch { return []; }
-}
 const WEEKS = 8;
 const TRICKS_PER_WEEK = 5;
 
@@ -125,74 +120,66 @@ app.get('/api/config', (req, res) => {
 
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 
-function currentWeekStart() {
-  const schedule = loadSchedule();
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  let current = null;
-  for (const entry of schedule) {
-    if (new Date(entry.start + 'T00:00:00') <= now) current = entry;
+app.get('/api/leaderboard', async (req, res) => {
+  if (!supabaseAdmin) return res.json({ entries: [], count: 0 });
+
+  // Default to current active week from schedule
+  let week = req.query.week;
+  if (!week) {
+    const schedule = loadSchedule();
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    let current = null;
+    for (const entry of schedule) {
+      if (new Date(entry.start + 'T00:00:00') <= now) current = entry;
+    }
+    week = current ? current.start : schedule[0]?.start;
   }
-  return current ? current.start : schedule[0]?.start;
-}
 
-// Leaderboard shows first name + last initial ("Brock S."), so full names aren't public.
-function shortName(full) {
-  const parts = String(full || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length < 2) return parts[0] || '';
-  return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
-}
+  const { data, error } = await supabaseAdmin
+    .from('weekly_scores')
+    .select('name, makes, total, dots, created_at')
+    .eq('week_start', week)
+    .order('created_at', { ascending: true });
 
-// Best ratio first, then most makes, then whoever got there first.
-function rank(entries) {
-  return entries.sort((a, b) => {
-    const ratioA = a.makes / a.total, ratioB = b.makes / b.total;
+  if (error) return res.json({ entries: [], count: 0 });
+
+  const sorted = (data || []).sort((a, b) => {
+    const ratioA = a.makes / a.total;
+    const ratioB = b.makes / b.total;
     if (ratioB !== ratioA) return ratioB - ratioA;
     if (b.makes !== a.makes) return b.makes - a.makes;
     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
   });
-}
 
-app.get('/api/leaderboard', async (req, res) => {
-  const week = req.query.week || currentWeekStart();
-  let entries = [];
-  if (supabaseAdmin) {
-    const { data, error } = await supabaseAdmin
-      .from('weekly_scores')
-      .select('name, makes, total, dots, created_at')
-      .eq('week_start', week);
-    if (!error) entries = data || [];
-  } else {
-    entries = loadLocalScores().filter(e => e.week_start === week);
-  }
-  entries = rank(entries).map(({ name, makes, total, dots }) => ({ name: shortName(name), makes, total, dots }));
-  res.json({ entries, count: entries.length, week });
+  res.json({ entries: sorted, count: sorted.length, week });
 });
 
 // ── Score submission ──────────────────────────────────────────────────────────
-// One row per player per week; it updates as they log more tricks.
 
 app.post('/api/weekly-score', async (req, res) => {
-  const { client_id, name, makes, total, dots, week_start } = req.body || {};
+  if (!supabaseAdmin) return res.status(503).json({ error: 'leaderboard not configured' });
+
+  const { client_id, name, makes, total, dots, week_start } = req.body;
   if (!client_id || !name || typeof makes !== 'number' || typeof total !== 'number' || !week_start) {
     return res.status(400).json({ error: 'missing fields' });
   }
-  const row = { client_id: String(client_id).slice(0, 80), name: String(name).trim().slice(0, 60), week_start,
-    makes, total, dots: String(dots || '').slice(0, 40) };
 
-  if (supabaseAdmin) {
-    const { error } = await supabaseAdmin
-      .from('weekly_scores')
-      .upsert(row, { onConflict: 'client_id,week_start' });
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json({ ok: true });
-  }
+  // Lock score — one submission per device per week
+  const { data: existing } = await supabaseAdmin
+    .from('weekly_scores')
+    .select('id')
+    .eq('client_id', client_id)
+    .eq('week_start', week_start)
+    .single();
 
-  const all = loadLocalScores();
-  const existing = all.find(e => e.client_id === row.client_id && e.week_start === row.week_start);
-  if (existing) Object.assign(existing, row);
-  else all.push({ ...row, created_at: new Date().toISOString() });
-  fs.writeFileSync(SCORES_FILE, JSON.stringify(all, null, 2));
+  if (existing) return res.json({ ok: true, locked: true });
+
+  const { error } = await supabaseAdmin
+    .from('weekly_scores')
+    .insert({ client_id, name: name.trim(), week_start, makes, total, dots: dots || '' });
+
+  if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
 
